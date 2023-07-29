@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 =======
 <div align="center">
   <img src="resources/mmseg-logo.png" width="600"/>
