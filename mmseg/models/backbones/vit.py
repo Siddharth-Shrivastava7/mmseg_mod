@@ -7,16 +7,17 @@ import torch.nn as nn
 import torch.utils.checkpoint as cp
 from mmcv.cnn import build_norm_layer
 from mmcv.cnn.bricks.transformer import FFN, MultiheadAttention
-from mmengine.logging import print_log
-from mmengine.model import BaseModule, ModuleList
-from mmengine.model.weight_init import (constant_init, kaiming_init,
+from mmcv.cnn.utils.weight_init import (constant_init, kaiming_init,
                                         trunc_normal_)
-from mmengine.runner.checkpoint import CheckpointLoader, load_state_dict
+from mmcv.runner import (BaseModule, CheckpointLoader, ModuleList,
+                         load_state_dict)
 from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.modules.utils import _pair as to_2tuple
 
-from mmseg.registry import MODELS
-from ..utils import PatchEmbed, resize
+from mmseg.ops import resize
+from mmseg.utils import get_root_logger
+from ..builder import BACKBONES
+from ..utils import PatchEmbed
 
 
 class TransformerEncoderLayer(BaseModule):
@@ -60,7 +61,7 @@ class TransformerEncoderLayer(BaseModule):
                  attn_cfg=dict(),
                  ffn_cfg=dict(),
                  with_cp=False):
-        super().__init__()
+        super(TransformerEncoderLayer, self).__init__()
 
         self.norm1_name, norm1 = build_norm_layer(
             norm_cfg, embed_dims, postfix=1)
@@ -121,7 +122,7 @@ class TransformerEncoderLayer(BaseModule):
         return x
 
 
-@MODELS.register_module()
+@BACKBONES.register_module()
 class VisionTransformer(BaseModule):
     """Vision Transformer.
 
@@ -197,7 +198,7 @@ class VisionTransformer(BaseModule):
                  with_cp=False,
                  pretrained=None,
                  init_cfg=None):
-        super().__init__(init_cfg=init_cfg)
+        super(VisionTransformer, self).__init__(init_cfg=init_cfg)
 
         if isinstance(img_size, int):
             img_size = to_2tuple(img_size)
@@ -292,8 +293,9 @@ class VisionTransformer(BaseModule):
     def init_weights(self):
         if (isinstance(self.init_cfg, dict)
                 and self.init_cfg.get('type') == 'Pretrained'):
+            logger = get_root_logger()
             checkpoint = CheckpointLoader.load_checkpoint(
-                self.init_cfg['checkpoint'], logger=None, map_location='cpu')
+                self.init_cfg['checkpoint'], logger=logger, map_location='cpu')
 
             if 'state_dict' in checkpoint:
                 state_dict = checkpoint['state_dict']
@@ -302,9 +304,9 @@ class VisionTransformer(BaseModule):
 
             if 'pos_embed' in state_dict.keys():
                 if self.pos_embed.shape != state_dict['pos_embed'].shape:
-                    print_log(msg=f'Resize the pos_embed shape from '
-                              f'{state_dict["pos_embed"].shape} to '
-                              f'{self.pos_embed.shape}')
+                    logger.info(msg=f'Resize the pos_embed shape from '
+                                f'{state_dict["pos_embed"].shape} to '
+                                f'{self.pos_embed.shape}')
                     h, w = self.img_size
                     pos_size = int(
                         math.sqrt(state_dict['pos_embed'].shape[1] - 1))
@@ -313,9 +315,9 @@ class VisionTransformer(BaseModule):
                         (h // self.patch_size, w // self.patch_size),
                         (pos_size, pos_size), self.interpolate_mode)
 
-            load_state_dict(self, state_dict, strict=False, logger=None)
+            load_state_dict(self, state_dict, strict=False, logger=logger)
         elif self.init_cfg is not None:
-            super().init_weights()
+            super(VisionTransformer, self).init_weights()
         else:
             # We only implement the 'jax_impl' initialization implemented at
             # https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py#L353  # noqa: E501
@@ -335,7 +337,7 @@ class VisionTransformer(BaseModule):
                     constant_init(m, val=1.0, bias=0.)
 
     def _pos_embeding(self, patched_img, hw_shape, pos_embed):
-        """Positioning embeding method.
+        """Positiong embeding method.
 
         Resize the pos_embed, if the input image size doesn't match
             the training size.
@@ -384,13 +386,13 @@ class VisionTransformer(BaseModule):
         """
         assert pos_embed.ndim == 3, 'shape of pos_embed must be [B, L, C]'
         pos_h, pos_w = pos_shape
-        cls_token_weight = pos_embed[:, 0]
+        # keep dim for easy deployment
+        cls_token_weight = pos_embed[:, 0:1]
         pos_embed_weight = pos_embed[:, (-1 * pos_h * pos_w):]
         pos_embed_weight = pos_embed_weight.reshape(
             1, pos_h, pos_w, pos_embed.shape[2]).permute(0, 3, 1, 2)
         pos_embed_weight = resize(
             pos_embed_weight, size=input_shpae, align_corners=False, mode=mode)
-        cls_token_weight = cls_token_weight.unsqueeze(1)
         pos_embed_weight = torch.flatten(pos_embed_weight, 2).transpose(1, 2)
         pos_embed = torch.cat((cls_token_weight, pos_embed_weight), dim=1)
         return pos_embed
@@ -431,7 +433,7 @@ class VisionTransformer(BaseModule):
         return tuple(outs)
 
     def train(self, mode=True):
-        super().train(mode)
+        super(VisionTransformer, self).train(mode)
         if mode and self.norm_eval:
             for m in self.modules():
                 if isinstance(m, nn.LayerNorm):

@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
 
-from mmseg.registry import MODELS
+from ..builder import HEADS
 from .decode_head import BaseDecodeHead
 
 
-@MODELS.register_module()
+@HEADS.register_module()
 class FCNHead(BaseDecodeHead):
     """Fully Convolution Networks for Semantic Segmentation.
 
@@ -31,7 +31,7 @@ class FCNHead(BaseDecodeHead):
         self.num_convs = num_convs
         self.concat_input = concat_input
         self.kernel_size = kernel_size
-        super().__init__(**kwargs)
+        super(FCNHead, self).__init__(**kwargs)
         if num_convs == 0:
             assert self.in_channels == self.channels
 

@@ -1,132 +1,73 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
-from collections import defaultdict
-from pathlib import Path
-from typing import Optional, Sequence, Union
-
+import matplotlib.pyplot as plt
 import mmcv
-import numpy as np
 import torch
-from mmengine import Config
-from mmengine.dataset import Compose
-from mmengine.registry import init_default_scope
-from mmengine.runner import load_checkpoint
-from mmengine.utils import mkdir_or_exist
+from mmcv.parallel import collate, scatter
+from mmcv.runner import load_checkpoint
 
-from mmseg.models import BaseSegmentor
-from mmseg.registry import MODELS
-from mmseg.structures import SegDataSample
-from mmseg.utils import SampleList, dataset_aliases, get_classes, get_palette
-from mmseg.visualization import SegLocalVisualizer
+from mmseg.datasets.pipelines import Compose
+from mmseg.models import build_segmentor
 
 
-def init_model(config: Union[str, Path, Config],
-               checkpoint: Optional[str] = None,
-               device: str = 'cuda:0',
-               cfg_options: Optional[dict] = None):
+def init_segmentor(config, checkpoint=None, device='cuda:0'):
     """Initialize a segmentor from config file.
 
     Args:
-        config (str, :obj:`Path`, or :obj:`mmengine.Config`): Config file path,
-            :obj:`Path`, or the config object.
+        config (str or :obj:`mmcv.Config`): Config file path or the config
+            object.
         checkpoint (str, optional): Checkpoint path. If left as None, the model
             will not load any weights.
         device (str, optional) CPU/CUDA device option. Default 'cuda:0'.
             Use 'cpu' for loading model on CPU.
-        cfg_options (dict, optional): Options to override some settings in
-            the used config.
     Returns:
         nn.Module: The constructed segmentor.
     """
-    if isinstance(config, (str, Path)):
-        config = Config.fromfile(config)
-    elif not isinstance(config, Config):
+    if isinstance(config, str):
+        config = mmcv.Config.fromfile(config)
+    elif not isinstance(config, mmcv.Config):
         raise TypeError('config must be a filename or Config object, '
                         'but got {}'.format(type(config)))
-    if cfg_options is not None:
-        config.merge_from_dict(cfg_options)
-    elif 'init_cfg' in config.model.backbone:
-        config.model.backbone.init_cfg = None
     config.model.pretrained = None
     config.model.train_cfg = None
-    init_default_scope(config.get('default_scope', 'mmseg'))
-
-    model = MODELS.build(config.model)
+    model = build_segmentor(config.model, test_cfg=config.get('test_cfg'))
     if checkpoint is not None:
         checkpoint = load_checkpoint(model, checkpoint, map_location='cpu')
-        dataset_meta = checkpoint['meta'].get('dataset_meta', None)
-        # save the dataset_meta in the model for convenience
-        if 'dataset_meta' in checkpoint.get('meta', {}):
-            # mmseg 1.x
-            model.dataset_meta = dataset_meta
-        elif 'CLASSES' in checkpoint.get('meta', {}):
-            # < mmseg 1.x
-            classes = checkpoint['meta']['CLASSES']
-            palette = checkpoint['meta']['PALETTE']
-            model.dataset_meta = {'classes': classes, 'palette': palette}
-        else:
-            warnings.simplefilter('once')
-            warnings.warn(
-                'dataset_meta or class names are not saved in the '
-                'checkpoint\'s meta data, classes and palette will be'
-                'set according to num_classes ')
-            num_classes = model.decode_head.num_classes
-            dataset_name = None
-            for name in dataset_aliases.keys():
-                if len(get_classes(name)) == num_classes:
-                    dataset_name = name
-                    break
-            if dataset_name is None:
-                warnings.warn(
-                    'No suitable dataset found, use Cityscapes by default')
-                dataset_name = 'cityscapes'
-            model.dataset_meta = {
-                'classes': get_classes(dataset_name),
-                'palette': get_palette(dataset_name)
-            }
+        model.CLASSES = checkpoint['meta']['CLASSES']
+        model.PALETTE = checkpoint['meta']['PALETTE']
     model.cfg = config  # save the config in the model for convenience
     model.to(device)
     model.eval()
     return model
 
 
-ImageType = Union[str, np.ndarray, Sequence[str], Sequence[np.ndarray]]
+class LoadImage:
+    """A simple pipeline to load image."""
 
+    def __call__(self, results):
+        """Call function to load images into results.
 
-def _preprare_data(imgs: ImageType, model: BaseSegmentor):
+        Args:
+            results (dict): A result dict contains the file name
+                of the image to be read.
 
-    cfg = model.cfg
-    for t in cfg.test_pipeline:
-        if t.get('type') == 'LoadAnnotations':
-            cfg.test_pipeline.remove(t)
+        Returns:
+            dict: ``results`` will be returned containing loaded image.
+        """
 
-    is_batch = True
-    if not isinstance(imgs, (list, tuple)):
-        imgs = [imgs]
-        is_batch = False
-
-    if isinstance(imgs[0], np.ndarray):
-        cfg.test_pipeline[0]['type'] = 'LoadImageFromNDArray'
-
-    # TODO: Consider using the singleton pattern to avoid building
-    # a pipeline for each inference
-    pipeline = Compose(cfg.test_pipeline)
-
-    data = defaultdict(list)
-    for img in imgs:
-        if isinstance(img, np.ndarray):
-            data_ = dict(img=img)
+        if isinstance(results['img'], str):
+            results['filename'] = results['img']
+            results['ori_filename'] = results['img']
         else:
-            data_ = dict(img_path=img)
-        data_ = pipeline(data_)
-        data['inputs'].append(data_['inputs'])
-        data['data_samples'].append(data_['data_samples'])
+            results['filename'] = None
+            results['ori_filename'] = None
+        img = mmcv.imread(results['img'])
+        results['img'] = img
+        results['img_shape'] = img.shape
+        results['ori_shape'] = img.shape
+        return results
 
-    return data, is_batch
 
-
-def inference_model(model: BaseSegmentor,
-                    img: ImageType) -> Union[SegDataSample, SampleList]:
+def inference_segmentor(model, imgs):
     """Inference image(s) with the segmentor.
 
     Args:
@@ -135,80 +76,70 @@ def inference_model(model: BaseSegmentor,
             images.
 
     Returns:
-        :obj:`SegDataSample` or list[:obj:`SegDataSample`]:
-        If imgs is a list or tuple, the same length list type results
-        will be returned, otherwise return the segmentation results directly.
+        (list[Tensor]): The segmentation result.
     """
+    cfg = model.cfg
+    device = next(model.parameters()).device  # model device
+    # build the data pipeline
+    test_pipeline = [LoadImage()] + cfg.data.test.pipeline[1:]
+    test_pipeline = Compose(test_pipeline)
     # prepare data
-    data, is_batch = _preprare_data(img, model)
+    data = []
+    imgs = imgs if isinstance(imgs, list) else [imgs]
+    for img in imgs:
+        img_data = dict(img=img)
+        img_data = test_pipeline(img_data)
+        data.append(img_data)
+    data = collate(data, samples_per_gpu=len(imgs))
+    if next(model.parameters()).is_cuda:
+        # scatter to specified GPU
+        data = scatter(data, [device])[0]
+    else:
+        data['img_metas'] = [i.data[0] for i in data['img_metas']]
 
     # forward the model
     with torch.no_grad():
-        results = model.test_step(data)
+        result = model(return_loss=False, rescale=True, **data)
+    return result
 
-    return results if is_batch else results[0]
 
-
-def show_result_pyplot(model: BaseSegmentor,
-                       img: Union[str, np.ndarray],
-                       result: SegDataSample,
-                       opacity: float = 0.5,
-                       title: str = '',
-                       draw_gt: bool = True,
-                       draw_pred: bool = True,
-                       wait_time: float = 0,
-                       show: bool = True,
-                       save_dir=None,
+def show_result_pyplot(model,
+                       img,
+                       result,
+                       palette=None,
+                       fig_size=(15, 10),
+                       opacity=0.5,
+                       title='',
+                       block=True,
                        out_file=None):
     """Visualize the segmentation results on the image.
 
     Args:
         model (nn.Module): The loaded segmentor.
         img (str or np.ndarray): Image filename or loaded image.
-        result (SegDataSample): The prediction SegDataSample result.
+        result (list): The segmentation result.
+        palette (list[list[int]]] | None): The palette of segmentation
+            map. If None is given, random palette will be generated.
+            Default: None
+        fig_size (tuple): Figure size of the pyplot figure.
         opacity(float): Opacity of painted segmentation map.
-            Default 0.5. Must be in (0, 1] range.
+            Default 0.5.
+            Must be in (0, 1] range.
         title (str): The title of pyplot figure.
             Default is ''.
-        draw_gt (bool): Whether to draw GT SegDataSample. Default to True.
-        draw_pred (bool): Whether to draw Prediction SegDataSample.
-            Defaults to True.
-        wait_time (float): The interval of show (s). 0 is the special value
-            that means "forever". Defaults to 0.
-        show (bool): Whether to display the drawn image.
-            Default to True.
-        save_dir (str, optional): Save file dir for all storage backends.
-            If it is None, the backend storage will not save any data.
-        out_file (str, optional): Path to output file. Default to None.
-
-    Returns:
-        np.ndarray: the drawn image which channel is RGB.
+        block (bool): Whether to block the pyplot figure.
+            Default is True.
+        out_file (str or None): The path to write the image.
+            Default: None.
     """
     if hasattr(model, 'module'):
         model = model.module
-    if isinstance(img, str):
-        image = mmcv.imread(img, channel_order='rgb')
-    else:
-        image = img
-    if save_dir is not None:
-        mkdir_or_exist(save_dir)
-    # init visualizer
-    visualizer = SegLocalVisualizer(
-        vis_backends=[dict(type='LocalVisBackend')],
-        save_dir=save_dir,
-        alpha=opacity)
-    visualizer.dataset_meta = dict(
-        classes=model.dataset_meta['classes'],
-        palette=model.dataset_meta['palette'])
-    visualizer.add_datasample(
-        name=title,
-        image=image,
-        data_sample=result,
-        draw_gt=draw_gt,
-        draw_pred=draw_pred,
-        wait_time=wait_time,
-        out_file=out_file,
-        show=show)
-    vis_img = visualizer.get_image()
-
-    return vis_img
+    img = model.show_result(
+        img, result, palette=palette, show=False, opacity=opacity)
+    plt.figure(figsize=fig_size)
+    plt.imshow(mmcv.bgr2rgb(img))
+    plt.title(title)
+    plt.tight_layout()
+    plt.show(block=block)
+    if out_file is not None:
+        mmcv.imwrite(img, out_file)

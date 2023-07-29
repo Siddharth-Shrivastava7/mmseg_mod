@@ -15,6 +15,6 @@ python -m torch.distributed.launch \
     --master_port=$PORT \
     $(dirname "$0")/test.py \
     $CONFIG \
-    $CHECKPOINT \
+    $CHECKPOINT \       
     --launcher pytorch \
     ${@:4}

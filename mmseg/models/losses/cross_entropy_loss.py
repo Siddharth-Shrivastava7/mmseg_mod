@@ -3,11 +3,74 @@ import warnings
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F 
+import json 
 
-from mmseg.registry import MODELS
+from ..builder import LOSSES
 from .utils import get_class_weight, weight_reduce_loss
 
+
+## making loss suitable for binary segmentation or less class segmentation then the 
+## original estimated class segmentation  
+@LOSSES.register_module()   
+class CrossEntropy2d(nn.Module): 
+    def __init__(self, size_average=True, ignore_label=255, ignore_classes = [], weights = None, loss_weight = 1.0, loss_name='loss_ce2d'):
+        super(CrossEntropy2d, self).__init__()
+        self.size_average = size_average
+        self.ignore_label = ignore_label
+        self.ignore_classes = ignore_classes
+        self.weights = weights 
+        self.loss_weight = loss_weight 
+        self._loss_name = loss_name
+
+    def forward(self, predict, target, weight = None, ignore_index = 255):
+        """
+            Args:
+                predict:(n, c, h, w)
+                target:(n, h, w)
+                weight (Tensor, optional): a manual rescaling weight given to each class.
+                                           If given, has to be a Tensor of size "nclasses"
+        """
+        assert not target.requires_grad
+        assert predict.dim() == 4
+        assert target.dim() == 3
+        assert predict.size(0) == target.size(0), "{0} vs {1} ".format(predict.size(0), target.size(0))
+        assert predict.size(2) == target.size(1), "{0} vs {1} ".format(predict.size(2), target.size(1))
+        assert predict.size(3) == target.size(2), "{0} vs {1} ".format(predict.size(3), target.size(3))
+        n, c, h, w = predict.size()
+        
+        target_mask = (target >= 0) * (target != self.ignore_label)   
+        
+        if self.ignore_classes: 
+            self.ignore_classes = json.loads(str(self.ignore_classes))  # to convert string of list to int of list 
+            ## have to ignore classes  
+            for ig_cl in self.ignore_classes: 
+                target_mask = target_mask * (target!= ig_cl) 
+        
+        
+        target = target[target_mask]
+        predict = predict.transpose(1, 2).transpose(2, 3).contiguous()
+        predict = predict[target_mask.view(n, h, w, 1).repeat(1, 1, 1, c)].view(-1, c)
+        loss = self.loss_weight * F.cross_entropy(predict, target, weight=weight, size_average=self.size_average, ignore_index = ignore_index)
+        # loss = F.nll_loss(torch.log(predict), target, weight=weight, size_average=self.size_average) ## NLL loss cause the pred is now in softmax form.. 
+        return loss  
+    
+    @property
+    def loss_name(self):
+        """Loss Name.
+
+        This function must be implemented and will return the name of this
+        loss function. This name will be used to combine different loss items
+        by simple sum operation. In addition, if you want this loss item to be
+        included into the backward graph, `loss_` must be the prefix of the
+        name.
+
+        Returns:
+            str: The name of this loss item.
+        """
+        return self._loss_name
+    
+    
 
 def cross_entropy(pred,
                   label,
@@ -193,7 +256,7 @@ def mask_cross_entropy(pred,
         pred_slice, target, weight=class_weight, reduction='mean')[None]
 
 
-@MODELS.register_module()
+@LOSSES.register_module()
 class CrossEntropyLoss(nn.Module):
     """CrossEntropyLoss.
 
@@ -223,7 +286,7 @@ class CrossEntropyLoss(nn.Module):
                  loss_weight=1.0,
                  loss_name='loss_ce',
                  avg_non_ignore=False):
-        super().__init__()
+        super(CrossEntropyLoss, self).__init__()
         assert (use_sigmoid is False) or (use_mask is False)
         self.use_sigmoid = use_sigmoid
         self.use_mask = use_mask

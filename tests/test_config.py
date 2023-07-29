@@ -3,10 +3,7 @@ import glob
 import os
 from os.path import dirname, exists, isdir, join, relpath
 
-import numpy as np
-from mmengine import Config
-from mmengine.dataset import Compose
-from mmengine.registry import init_default_scope
+from mmcv import Config
 from torch import nn
 
 from mmseg.models import build_segmentor
@@ -31,7 +28,7 @@ def test_config_build_segmentor():
     """Test that all segmentation models defined in the configs can be
     initialized."""
     config_dpath = _get_config_directory()
-    print(f'Found config_dpath = {config_dpath!r}')
+    print('Found config_dpath = {!r}'.format(config_dpath))
 
     config_fpaths = []
     # one config each sub folder
@@ -42,20 +39,20 @@ def test_config_build_segmentor():
     config_fpaths = [p for p in config_fpaths if p.find('_base_') == -1]
     config_names = [relpath(p, config_dpath) for p in config_fpaths]
 
-    print(f'Using {len(config_names)} config files')
+    print('Using {} config files'.format(len(config_names)))
 
     for config_fname in config_names:
         config_fpath = join(config_dpath, config_fname)
         config_mod = Config.fromfile(config_fpath)
 
         config_mod.model
-        print(f'Building segmentor, config_fpath = {config_fpath!r}')
+        print('Building segmentor, config_fpath = {!r}'.format(config_fpath))
 
         # Remove pretrained keys to allow for testing in an offline environment
         if 'pretrained' in config_mod.model:
             config_mod.model['pretrained'] = None
 
-        print(f'building {config_fname}')
+        print('building {}'.format(config_fname))
         segmentor = build_segmentor(config_mod.model)
         assert segmentor is not None
 
@@ -69,34 +66,32 @@ def test_config_data_pipeline():
     CommandLine:
         xdoctest -m tests/test_config.py test_config_build_data_pipeline
     """
+    import numpy as np
+    from mmcv import Config
 
-    init_default_scope('mmseg')
+    from mmseg.datasets.pipelines import Compose
+
     config_dpath = _get_config_directory()
-    print(f'Found config_dpath = {config_dpath!r}')
+    print('Found config_dpath = {!r}'.format(config_dpath))
 
     import glob
     config_fpaths = list(glob.glob(join(config_dpath, '**', '*.py')))
     config_fpaths = [p for p in config_fpaths if p.find('_base_') == -1]
     config_names = [relpath(p, config_dpath) for p in config_fpaths]
 
-    print(f'Using {len(config_names)} config files')
+    print('Using {} config files'.format(len(config_names)))
 
     for config_fname in config_names:
         config_fpath = join(config_dpath, config_fname)
-        print(f'Building data pipeline, config_fpath = {config_fpath!r}')
+        print(
+            'Building data pipeline, config_fpath = {!r}'.format(config_fpath))
         config_mod = Config.fromfile(config_fpath)
 
         # remove loading pipeline
         load_img_pipeline = config_mod.train_pipeline.pop(0)
         to_float32 = load_img_pipeline.get('to_float32', False)
-        del config_mod.train_pipeline[0]
-        del config_mod.test_pipeline[0]
-        # remove loading annotation in test pipeline
-        load_anno_idx = -1
-        for i in range(len(config_mod.test_pipeline)):
-            if config_mod.test_pipeline[i].type == 'LoadAnnotations':
-                load_anno_idx = i
-        del config_mod.test_pipeline[load_anno_idx]
+        config_mod.train_pipeline.pop(0)
+        config_mod.test_pipeline.pop(0)
 
         train_pipeline = Compose(config_mod.train_pipeline)
         test_pipeline = Compose(config_mod.test_pipeline)
@@ -112,27 +107,23 @@ def test_config_data_pipeline():
             img=img,
             img_shape=img.shape,
             ori_shape=img.shape,
-            gt_seg_map=seg)
-        results['seg_fields'] = ['gt_seg_map']
-        _check_concat_cd_input(config_mod, results)
-        print(f'Test training data pipeline: \n{train_pipeline!r}')
+            gt_semantic_seg=seg)
+        results['seg_fields'] = ['gt_semantic_seg']
+
+        print('Test training data pipeline: \n{!r}'.format(train_pipeline))
         output_results = train_pipeline(results)
         assert output_results is not None
 
-        _check_concat_cd_input(config_mod, results)
-        print(f'Test testing data pipeline: \n{test_pipeline!r}')
+        results = dict(
+            filename='test_img.png',
+            ori_filename='test_img.png',
+            img=img,
+            img_shape=img.shape,
+            ori_shape=img.shape,
+        )
+        print('Test testing data pipeline: \n{!r}'.format(test_pipeline))
         output_results = test_pipeline(results)
         assert output_results is not None
-
-
-def _check_concat_cd_input(config_mod: Config, results: dict):
-    keys = []
-    pipeline = config_mod.train_pipeline.copy()
-    pipeline.extend(config_mod.test_pipeline)
-    for t in pipeline:
-        keys.append(t.type)
-    if 'ConcatCDInput' in keys:
-        results.update({'img2': results['img']})
 
 
 def _check_decode_head(decode_head_cfg, decode_head):
