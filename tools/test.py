@@ -19,8 +19,8 @@ from mmseg.datasets import build_dataloader, build_dataset
 from mmseg.models import build_segmentor
 from mmseg.utils import build_ddp, build_dp, get_device, setup_multi_processes
 
-from work.custom_pipeline import MyTransform 
-from work.custom_pipeline import MyValTransform 
+# from work.custom_pipeline import MyTransform 
+# from work.custom_pipeline import MyValTransform 
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -283,7 +283,7 @@ def main():
             args.opacity,
             pre_eval=args.eval is not None and not eval_on_format_results,
             format_only=args.format_only or eval_on_format_results,
-            format_args=eval_kwargs, imp_rat=imp_rat) ## adding extra argument for finding improvement ratio  
+            format_args=eval_kwargs) ## adding extra argument for finding improvement ratio  
     else:
         model = build_ddp(
             model,
