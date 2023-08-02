@@ -1,22 +1,23 @@
 from PIL import Image
 import os
 import pickle
-from glob import glob
+from glob import glob 
+import numpy as np
 
 ## to convert whole images inside bird folder
 ## input folder = bird\\images\\all_images_in_jpg_format
 
 PICKLE_FILE = "/home/sidd_s/scratch/results/oneformer/results_filenames.pickle"
-SOURCE_DIRECTORY = "/home/sidd_s/scratch/results/oneformer/semantic_inference"
+SOURCE_DIRECTORY = "/home/sidd_s/scratch/results/oneformer/semantic_inference/"
 PICKLE_IMAGES = "/home/sidd_s/scratch/results/oneformer/results_images.pickle"
 
-path_list = glob(os.path.join(SOURCE_DIRECTORY, "*.png"))
+path_list = sorted(glob(os.path.join(SOURCE_DIRECTORY, "*.png")))
 
 # pickle images into big pickle file
 
 with open(PICKLE_IMAGES,"wb") as f:
     for file_name in path_list:
-        pickle.dump(Image.open(file_name),f)
+        pickle.dump(np.array(Image.open(file_name)),f)
         
 # get short names from the path list 
 
