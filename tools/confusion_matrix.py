@@ -159,7 +159,6 @@ def main():
         cfg.merge_from_dict(args.cfg_options)
 
     results = mmcv.load(args.prediction_path)
-    print(results.shape)  
 
     assert isinstance(results, list)
     if isinstance(results[0], np.ndarray):
