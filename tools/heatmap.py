@@ -64,6 +64,11 @@ row_sums = list_of_lists_arr.sum(axis=1)
 new_matrix = list_of_lists_arr / row_sums[:, np.newaxis]
 
 
+## one-hot adjacency matrix 
+adjacency_matrix_one_hot = list_of_lists_arr 
+adjacency_matrix_one_hot[list_of_lists_arr > 0] = 1
+
+
 df = pd.DataFrame(new_matrix.tolist(), columns=cols, index=idx)
 df.to_string(col_space=50)
 
