@@ -152,7 +152,7 @@ def plot_confusion_matrix(confusion_matrix,
         plt.show()
 
 
-## derived from above confusion matrix of oneformer model on cityscapes val dataset ## 
+## derived from above confusion matrix of "oneformer" model on cityscapes val dataset ## 
 list_of_lists = [[0,        0.38,           0,           0,     0,     0,            0,              0,              0,       0.03,        0,      0,       0,   0.07,      0,       0,      0,        0,            0 ],
         [3.82,        0,           0.47,           0,     0,     0,            0,              0,              0,         0.65,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
         [0,        0.12,           0,           0,     0,     0.3,            0,              0,              1.32,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],

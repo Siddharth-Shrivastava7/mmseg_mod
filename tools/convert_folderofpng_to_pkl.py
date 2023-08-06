@@ -3,13 +3,14 @@ import os
 import pickle
 from glob import glob 
 import numpy as np
+from tqdm import tqdm 
 
 ## to convert whole images inside bird folder
 ## input folder = bird\\images\\all_images_in_jpg_format
 
-PICKLE_FILE = "/home/sidd_s/scratch/results/oneformer/results_filenames.pickle"
-SOURCE_DIRECTORY = "/home/sidd_s/scratch/results/oneformer/semantic_inference/"
-PICKLE_IMAGES = "/home/sidd_s/scratch/results/oneformer/results_images.pickle"
+# PICKLE_FILE = "/home/sidd_s/scratch/results/oneformer/results_filenames.pickle"
+SOURCE_DIRECTORY = "/home/sidd_s/scratch/mmseg_results/segformer/cityscapes/"
+PICKLE_IMAGES = "/home/sidd_s/scratch/mmseg_results/segformer/cityscapes/results_images.pickle"
 
 path_list = sorted(glob(os.path.join(SOURCE_DIRECTORY, "*.png")))
 
@@ -17,7 +18,7 @@ path_list = sorted(glob(os.path.join(SOURCE_DIRECTORY, "*.png")))
 list_images = []
 
 with open(PICKLE_IMAGES,"wb") as f:
-    for file_name in path_list:
+    for file_name in tqdm(path_list):
         list_images.append(np.array(Image.open(file_name)))
     pickle.dump(list_images,f)
     
