@@ -217,7 +217,7 @@ def plot_adjacency_matrix(adjacency_matrix,
     
     num_classes = len(labels)
     fig, ax = plt.subplots(
-        figsize=(2 * num_classes, 2 * num_classes * 0.8), dpi=180)
+        figsize=(num_classes, num_classes ), dpi=180)
     cmap = plt.get_cmap(color_theme)
     im = ax.imshow(adjacency_matrix, cmap=cmap)
     plt.colorbar(mappable=im, ax=ax)
