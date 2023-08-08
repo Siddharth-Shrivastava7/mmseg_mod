@@ -81,8 +81,8 @@ def calculate_adjacency_matrix(confusion_matrix, k=3):
     # print(adjacency_matrix)   
     
     ## for one hot adjacency matrix 
-    adjacency_matrix_as_one_hot = adjacency_matrix
-    adjacency_matrix_as_one_hot[adjacency_matrix_as_one_hot>0] = 1 
+    # adjacency_matrix_as_one_hot = adjacency_matrix
+    # adjacency_matrix_as_one_hot[adjacency_matrix_as_one_hot>0] = 1 
     
     return adjacency_matrix
 
@@ -209,10 +209,11 @@ def plot_adjacency_matrix(adjacency_matrix,
         color_theme (str): Theme of the matrix color map. Default: `winter`.
     """
     # # normalize the adjacency matrix
-    # per_label_sums = adjacency_matrix.sum(axis=1)[:, np.newaxis]
-    # adjacency_matrix = \
-    #     adjacency_matrix.astype(np.float32) / per_label_sums * 100
-    adjacency_matrix = adjacency_matrix/np.linalg.norm(adjacency_matrix, ord=2, axis=1, keepdims=True)  
+    per_label_sums = adjacency_matrix.sum(axis=1)[:, np.newaxis]
+    adjacency_matrix = \
+        adjacency_matrix.astype(np.float32) / per_label_sums * 100
+    # adjacency_matrix = adjacency_matrix/np.linalg.norm(adjacency_matrix, ord=2, axis=1, keepdims=True)  
+    # print(adjacency_matrix)
     
     num_classes = len(labels)
     fig, ax = plt.subplots(
