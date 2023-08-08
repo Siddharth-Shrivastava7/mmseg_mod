@@ -69,6 +69,23 @@ def calculate_confusion_matrix(dataset, results):
     return confusion_matrix
 
 
+def calculate_adjacency_matrix(confusion_matrix, k=3):
+    ## calculate adjacency_matrix from confusion matrix 
+    np.fill_diagonal(confusion_matrix,0) ## removing the dependency of the class with itself  ## its is an inplace argument 
+    # indices = np.argpartition(confusion_matrix, -k, axis=1)[:, -k:]
+    # top_k_values = np.take_along_axis(confusion_matrix, indices, axis=1)
+    sorted_indices = np.argsort(confusion_matrix) 
+    indices_as_ranks = np.argsort(np.argsort(confusion_matrix)) 
+    indices_which_are_topk_as_bool = (indices_as_ranks >= confusion_matrix.shape[1] - k) # shape[1] used as we need to find it along row 
+    adjacency_matrix = confusion_matrix * indices_which_are_topk_as_bool
+    # print(adjacency_matrix)   
+    
+    ## for one hot adjacency matrix 
+    adjacency_matrix_as_one_hot = adjacency_matrix
+    adjacency_matrix_as_one_hot[adjacency_matrix_as_one_hot>0] = 1 
+    
+    return adjacency_matrix
+
 def plot_confusion_matrix(confusion_matrix,
                           labels,
                           save_dir=None,
@@ -152,27 +169,27 @@ def plot_confusion_matrix(confusion_matrix,
         plt.show()
 
 
-## derived from above confusion matrix of "oneformer" model on cityscapes val dataset ## 
-list_of_lists = [[0,        0.38,           0,           0,     0,     0,            0,              0,              0,       0.03,        0,      0,       0,   0.07,      0,       0,      0,        0,            0 ],
-        [3.82,        0,           0.47,           0,     0,     0,            0,              0,              0,         0.65,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0.12,           0,           0,     0,     0.3,            0,              0,              1.32,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           10.84,           0,     3.71,     0,            0,              0,              1.99,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           9.97,           6.06,     0,     0,            0,              0,              2.18,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        1.38,           7.83,           0,     0,     0,            0,              0,              4.09,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           5.35,           0,     0,     2.23,            0,              0,              4.69,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           4.83,           0,     0,     1.22,            0,              0,              1.9,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           1.79,           0,     0,     0.31,            0,              0,              0,         0.53,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [1.6,       9.17,           0,           0,     0,     0,            0,              0,              9.71,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           11.51,           0,     0,     0.09,            0,              0,              1.01,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           3.65,           0,     0,     0,            0,              0,              0.53,         0,        0,      0,       0.97,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           1.47,           0,     0,     0,            0,              0,              0,         0,        0,      2.32,            0,      0,      0,       0,      0,        0,            5.16 ],
-        [0.77,        0,           0.41,           0,     0,     0,            0,              0,              0.25,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
-        [0,        0,           1.24,           0,     0,     0,            0,              0,              0.46,         0,        0,      0,       0,      3.96,         0,          0,         0,           0,      0 ],
-        [0.61,        0,           0.83,           0,     0,     0,            0,              0,              0,         0,        0,      0,       0,       0.55,      0,           0,         0,            0,    0 ],
-        [0,        0,           2.19,           0,     0,     0,            0,              0,              1.37,         0,        0,      0,       0,      0,      0,       0.38,      0,        0,            0 ],
-        [0,        0,           2.61,           0,     0,     0,            0,              0,              0,         0,        0,      2.06,       0,      0,      0,       0,      0,        0,            2.16 ],
-        [0,        1.58,           4.19,           0,     1.45,     0,            0,              0,              0,         0,        0,      0,       1.58,      0,      0,       0,      0,        0,            0 ]]
-list_of_lists_arr = np.array(list_of_lists)        
+# ## derived from above confusion matrix of "oneformer" model on cityscapes val dataset ## 
+# list_of_lists = [[0,        0.38,           0,           0,     0,     0,            0,              0,              0,       0.03,        0,      0,       0,   0.07,      0,       0,      0,        0,            0 ],
+#         [3.82,        0,           0.47,           0,     0,     0,            0,              0,              0,         0.65,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0.12,           0,           0,     0,     0.3,            0,              0,              1.32,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           10.84,           0,     3.71,     0,            0,              0,              1.99,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           9.97,           6.06,     0,     0,            0,              0,              2.18,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        1.38,           7.83,           0,     0,     0,            0,              0,              4.09,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           5.35,           0,     0,     2.23,            0,              0,              4.69,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           4.83,           0,     0,     1.22,            0,              0,              1.9,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           1.79,           0,     0,     0.31,            0,              0,              0,         0.53,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [1.6,       9.17,           0,           0,     0,     0,            0,              0,              9.71,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           11.51,           0,     0,     0.09,            0,              0,              1.01,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           3.65,           0,     0,     0,            0,              0,              0.53,         0,        0,      0,       0.97,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           1.47,           0,     0,     0,            0,              0,              0,         0,        0,      2.32,            0,      0,      0,       0,      0,        0,            5.16 ],
+#         [0.77,        0,           0.41,           0,     0,     0,            0,              0,              0.25,         0,        0,      0,       0,      0,      0,       0,      0,        0,            0 ],
+#         [0,        0,           1.24,           0,     0,     0,            0,              0,              0.46,         0,        0,      0,       0,      3.96,         0,          0,         0,           0,      0 ],
+#         [0.61,        0,           0.83,           0,     0,     0,            0,              0,              0,         0,        0,      0,       0,       0.55,      0,           0,         0,            0,    0 ],
+#         [0,        0,           2.19,           0,     0,     0,            0,              0,              1.37,         0,        0,      0,       0,      0,      0,       0.38,      0,        0,            0 ],
+#         [0,        0,           2.61,           0,     0,     0,            0,              0,              0,         0,        0,      2.06,       0,      0,      0,       0,      0,        0,            2.16 ],
+#         [0,        1.58,           4.19,           0,     1.45,     0,            0,              0,              0,         0,        0,      0,       1.58,      0,      0,       0,      0,        0,            0 ]]
+# list_of_lists_arr = np.array(list_of_lists)        
         
 def plot_adjacency_matrix(adjacency_matrix,
                           labels,
@@ -180,22 +197,23 @@ def plot_adjacency_matrix(adjacency_matrix,
                           show=True,
                           title='Normalized Adjacency Matrix',
                           color_theme='winter'):
-    """Draw confusion matrix with matplotlib.
+    """Draw adjacency matrix with matplotlib.
 
     Args:
-        adjacency_matrix (ndarray): The confusion matrix.
+        adjacency_matrix (ndarray): The adjacency matrix.
         labels (list[str]): List of class names.
-        save_dir (str|optional): If set, save the confusion matrix plot to the
+        save_dir (str|optional): If set, save the adjacency matrix plot to the
             given path. Default: None.
         show (bool): Whether to show the plot. Default: True.
-        title (str): Title of the plot. Default: `Normalized Confusion Matrix`.
+        title (str): Title of the plot. Default: `Normalized adjacency Matrix`.
         color_theme (str): Theme of the matrix color map. Default: `winter`.
     """
-    # normalize the confusion matrix
-    per_label_sums = adjacency_matrix.sum(axis=1)[:, np.newaxis]
-    adjacency_matrix = \
-        adjacency_matrix.astype(np.float32) / per_label_sums * 100
-
+    # # normalize the adjacency matrix
+    # per_label_sums = adjacency_matrix.sum(axis=1)[:, np.newaxis]
+    # adjacency_matrix = \
+    #     adjacency_matrix.astype(np.float32) / per_label_sums * 100
+    adjacency_matrix = adjacency_matrix/np.linalg.norm(adjacency_matrix, ord=2, axis=1, keepdims=True)  
+    
     num_classes = len(labels)
     fig, ax = plt.subplots(
         figsize=(2 * num_classes, 2 * num_classes * 0.8), dpi=180)
@@ -280,10 +298,14 @@ def main():
 
     dataset = build_dataset(cfg.data.test)
     
-    if args.adjacency:    
+    if args.adjacency: 
+        ## calculate confusion matrix 
+        confusion_matrix = calculate_confusion_matrix(dataset, results)   
+        adjacency_matrix = calculate_adjacency_matrix(confusion_matrix, k=3) # 3 nearest neighbour adjacency matrix 
+        
         ## adjacency matrix 
         plot_adjacency_matrix(
-            list_of_lists_arr,
+            adjacency_matrix,
             dataset.CLASSES,
             save_dir=args.save_dir,
             show=args.show,
