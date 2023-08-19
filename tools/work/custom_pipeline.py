@@ -11,17 +11,17 @@ import torchvision.transforms as transforms
 @PIPELINES.register_module()
 class CityTransform:
     def __init__(self) -> None:
-        pass 
+        self.img_norm_cfg = dict(
+        mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+        
         
     def __call__(self, results):
         
-        print('****************', results, results['ori_filename'])
         input = Image.open(os.path.join(results['filename'])) 
         data_transforms = transforms.Compose([
             transforms.RandomHorizontalFlip(),
-            transforms.PILToTensor(),
-            transforms.ConvertImageDtype(torch.float),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
         ])
         results['img'] = data_transforms(input)
     
