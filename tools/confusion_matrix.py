@@ -10,6 +10,7 @@ from mmcv import Config, DictAction
 
 from mmseg.datasets import build_dataset
 
+from work.custom_pipeline import CityTransform        ## perturbing cityscapes
 
 def parse_args():
     parser = argparse.ArgumentParser(
