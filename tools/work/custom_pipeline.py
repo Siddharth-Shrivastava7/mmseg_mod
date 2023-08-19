@@ -7,6 +7,19 @@ import random
 import torchvision.transforms as transforms  
 
 
+
+class RandomUniformValues(object):
+    """
+    Class that fills -1.0 values in image with uniform random [0, 1).
+    """
+    def __call__(self, image):
+        if -1 not in image:
+            return image
+        else:
+            mask = torch.eq(input=image, other=-1.0)
+            random_values = torch.rand((image.shape[0], image.shape[1], image.shape[2]), dtype=torch.float32)
+            return image.masked_scatter_(mask=mask, source=random_values)
+
 ## perturbing cityscapes
 @PIPELINES.register_module()
 class CityTransform:
@@ -17,10 +30,15 @@ class CityTransform:
         
     def __call__(self, results):
         
+        torch.manual_seed(0) # reproducibility of results 
         input = Image.open(os.path.join(results['filename'])) 
         data_transforms = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+            transforms.TrivialAugmentWide(), 
+            transforms.ToTensor(), 
+            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            transforms.RandomErasing(), 
+            # transforms.RandomErasing(scale=(0.02, 0.4), value=-1),  
+            # RandomUniformValues(), 
         ])
         results['img'] = data_transforms(input)
     
