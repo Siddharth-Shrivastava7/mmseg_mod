@@ -8,7 +8,7 @@ model = dict(
         num_layers=[3, 4, 6, 3]),
     decode_head=dict(in_channels=[64, 128, 320, 512]))
 
-
+## perturbing cityscapes
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(

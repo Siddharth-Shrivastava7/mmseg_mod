@@ -20,7 +20,7 @@ from mmseg.models import build_segmentor
 from mmseg.utils import build_ddp, build_dp, get_device, setup_multi_processes
 
 # from work.custom_pipeline import MyTransform 
-from ..work.custom_pipeline import CityTransform
+from ..work.custom_pipeline import CityTransform        ## perturbing cityscapes
 
 def parse_args():
     parser = argparse.ArgumentParser(

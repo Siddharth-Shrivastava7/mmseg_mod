@@ -6,6 +6,8 @@ from PIL import Image
 import random
 import torchvision.transforms as transforms  
 
+
+## perturbing cityscapes
 @PIPELINES.register_module()
 class CityTransform:
     def __init__(self) -> None:
