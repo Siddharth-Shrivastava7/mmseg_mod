@@ -9,8 +9,8 @@ from tqdm import tqdm
 ## input folder = bird\\images\\all_images_in_jpg_format
 
 # PICKLE_FILE = "/home/sidd_s/scratch/results/oneformer/results_filenames.pickle"
-SOURCE_DIRECTORY = "/home/sidd_s/scratch/results/deeplabv3+r50/cityscapes/"
-PICKLE_IMAGES = "/home/sidd_s/scratch/results/deeplabv3+r50/cityscapes/results_images.pickle"
+SOURCE_DIRECTORY = "/home/sidd_s/scratch/results/segformer/perturbed_cityscapes/"
+PICKLE_IMAGES = "/home/sidd_s/scratch/results/segformer/perturbed_cityscapes/results_images.pickle"
 
 path_list = sorted(glob(os.path.join(SOURCE_DIRECTORY, "*.png")))
 
