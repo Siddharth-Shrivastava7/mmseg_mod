@@ -189,11 +189,16 @@ def plot_similarity_confusion_matrix(confusion_matrix,
     """
     
     similarity_confusion_matrix = confusion_matrix.T ## Transposing the original confusion < for comparing FP vs FN > 
+    # ## now normalising the diagonal terms with (FP + FN + TP) and off diagnoal terms with ? 
+    # similarity_confusion_matrix = confusion_matrix.copy()
+    
     
     # normalize the confusion matrix
     per_label_sums = similarity_confusion_matrix.sum(axis=1)[:, np.newaxis]
     similarity_confusion_matrix = \
         similarity_confusion_matrix.astype(np.float64) / per_label_sums * 100
+
+    
 
     num_classes = len(labels)
     fig, ax = plt.subplots(
