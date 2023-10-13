@@ -171,6 +171,11 @@ def single_gpu_test(model,
         else:
             results.extend(result)
 
+        if isinstance(result, list):
+            results.extend(result)
+        else:
+            results.append(result)        
+
         batch_size = len(result)
         for _ in range(batch_size):
             prog_bar.update()
