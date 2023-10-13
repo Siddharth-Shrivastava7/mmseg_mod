@@ -169,12 +169,7 @@ def single_gpu_test(model,
                 result = dataset.pre_eval(result, indices=batch_indices) 
             results.extend(result)
         else:
-            results.extend(result)
-
-        if isinstance(result, list):
-            results.extend(result)
-        else:
-            results.append(result)        
+            results.extend(result) # will be used for result is softmax-logit prediction
 
         batch_size = len(result)
         for _ in range(batch_size):
