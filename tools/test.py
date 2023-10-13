@@ -275,7 +275,7 @@ def main():
         model = revert_sync_batchnorm(model)
         model = build_dp(model, cfg.device, device_ids=cfg.gpu_ids)
         results = single_gpu_test(
-            model,
+            model,  
             data_loader,
             args.show, 
             args.show_dir,  

@@ -261,7 +261,7 @@ class EncoderDecoder(BaseSegmentor):
 
         return output
 
-    def simple_test(self, img, img_meta, rescale=True):
+    def simple_test(self, img, img_meta, logits_output = False ,rescale=True): # changing from original, using adding a new argument of logits_output <softmax prediction>
         """Simple test with single image."""
         seg_logit = self.inference(img, img_meta, rescale) 
         '''
@@ -280,9 +280,17 @@ class EncoderDecoder(BaseSegmentor):
         seg_pred = seg_pred.cpu().numpy()
         # unravel batch dim
         seg_pred = list(seg_pred) 
+
+        if logits_output:
+            ## adding additional terms for logits 
+            seg_logit = seg_logit.cpu().numpy() 
+            seg_logit = list(seg_logit)
+            ## adding additional terms for logits 
+            return seg_logit       
+
         return seg_pred
 
-    def aug_test(self, imgs, img_metas, rescale=True):
+    def aug_test(self, imgs, img_metas, logits_output = False, rescale=True): # changing from original, using adding a new argument of logits_output <softmax prediction>
         """Test with augmentations.
 
         Only rescale=True is supported.
@@ -302,5 +310,11 @@ class EncoderDecoder(BaseSegmentor):
             seg_pred = seg_logit.argmax(dim=1)
         seg_pred = seg_pred.cpu().numpy()
         # unravel batch dim
-        seg_pred = list(seg_pred)
+        seg_pred = list(seg_pred) 
+
+        if logits_output: 
+            seg_logit = seg_logit.cpu().numpy() 
+            seg_logit = list(seg_logit)
+            return seg_logit
+
         return seg_pred
