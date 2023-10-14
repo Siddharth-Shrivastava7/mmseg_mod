@@ -121,7 +121,7 @@ def single_gpu_test(model,
     for batch_indices, data in zip(loader_indices, data_loader):
         with torch.no_grad():
             # result = model(return_loss=False, **data) ## original
-            ## making changes below
+            ## making changes below for softmax as the prediction rather than labels 
             result = model(return_loss=False, logits_output= True, **data)   
         if show or out_dir:
             img_tensor = data['img'][0]
