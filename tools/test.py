@@ -102,6 +102,8 @@ def parse_args():
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument(
         '--imp-rat', action='store_true', help='calculate improvement ratio')
+    parser.add_argument(
+        '--softmaxop', action='store_true', help='provide the softmax logits as the prediction')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -283,7 +285,7 @@ def main():
             args.opacity,
             pre_eval=args.eval is not None and not eval_on_format_results,
             format_only=args.format_only or eval_on_format_results,
-            format_args=eval_kwargs) ## adding extra argument for finding improvement ratio  
+            format_args=eval_kwargs, softmaxop=args.softmaxop) ## adding extra argument for finding improvement ratio  
     else:
         model = build_ddp(
             model,

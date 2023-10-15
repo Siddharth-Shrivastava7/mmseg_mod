@@ -71,7 +71,7 @@ def single_gpu_test(model,
                     opacity=0.5,
                     pre_eval=False,
                     format_only=False,
-                    format_args={}, imp_rat = False):
+                    format_args={}, imp_rat = False, softmaxop = False):
     """Test with single GPU by progressive mode.
 
     Args:
@@ -122,7 +122,7 @@ def single_gpu_test(model,
         with torch.no_grad():
             # result = model(return_loss=False, **data) ## original
             ## making changes below for softmax as the prediction rather than labels 
-            result = model(return_loss=False, logits_output= True, **data)   
+            result = model(return_loss=False, logits_output= softmaxop, **data)   
         if show or out_dir:
             img_tensor = data['img'][0]
             img_metas = data['img_metas'][0].data[0]
