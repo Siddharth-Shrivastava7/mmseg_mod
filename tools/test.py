@@ -302,6 +302,8 @@ def main():
             format_only=args.format_only or eval_on_format_results,
             format_args=eval_kwargs)
 
+    # torch.cuda.empty_cache() ## experminenting for now ## no effect here, cause we have used empty_cache() earlier in the single_gpu_test method of the script
+
     rank, _ = get_dist_info() 
     results = results[1:] # neglecting the intersection of ip with gt, for further calculation of segmentation metrics
     if imp_rat:
