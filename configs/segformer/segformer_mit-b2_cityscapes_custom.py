@@ -21,5 +21,8 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    val=dict(pipeline=test_pipeline),
-    test=dict(pipeline=test_pipeline))
+    test=dict(pipeline=test_pipeline, 
+            ## using 'train' folder for generating perturbed cityscapes segformerb2 prediction
+            img_dir='leftImg8bit/train', 
+            ann_dir='gtFine/train')
+)
