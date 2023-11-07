@@ -172,7 +172,7 @@ def single_gpu_test(model,
         batch_size = len(result)
         for _ in range(batch_size):
             prog_bar.update()
-
+    
     return results
 
 
