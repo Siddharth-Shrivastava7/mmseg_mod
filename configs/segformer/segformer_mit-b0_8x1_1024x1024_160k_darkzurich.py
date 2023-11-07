@@ -11,7 +11,7 @@ model = dict(
 
 
 dataset_type = 'DarkZurichDataset'
-data_root = '/home/sidd_s/scratch/dataset/DarkZurich' 
+data_root = '/home/guest/scratch/siddharth/data/dataset/DarkZurich' 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 crop_size = (1024, 1024)
@@ -20,7 +20,7 @@ data = dict(
     workers_per_gpu=2,
     train=dict(
         type='DarkZurichDataset',
-        data_root='/home/sidd_s/scratch/dataset/DarkZurich' ,
+        data_root='/home/guest/scratch/siddharth/data/dataset/DarkZurich' ,
         img_dir='rgb_anon/train',
         ann_dir='gt/train',
         pipeline=[
@@ -43,7 +43,7 @@ data = dict(
         ]),
     val=dict(
         type='Cityscapes20Dataset',
-        data_root='/home/sidd_s/scratch/dataset/DarkZurich' ,
+        data_root='/home/guest/scratch/siddharth/data/dataset/DarkZurich' ,
         img_dir='rgb_anon/val',
         ann_dir='gt/val',
         pipeline=[
@@ -66,7 +66,7 @@ data = dict(
         ]),
     test=dict(
         type='DarkZurichDataset',
-        data_root='/home/sidd_s/scratch/dataset/DarkZurich' ,
+        data_root='/home/guest/scratch/siddharth/data/dataset/DarkZurich' ,
         img_dir='rgb_anon/val',
         ann_dir='gt/val',
         pipeline=[
