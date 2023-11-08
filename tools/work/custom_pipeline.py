@@ -9,17 +9,17 @@ import matplotlib.pyplot as plt
 import torchvision
 
 
-class RandomUniformValues(object):
+class RandomBlackValues(object):
     """
     Class that fills -1.0 values in image with uniform random [0, 1).
     """
     def __call__(self, image):
-        if -1 not in image:
-            return image
-        else:
-            mask = torch.eq(input=image, other=-1.0)
-            random_values = torch.rand((image.shape[0], image.shape[1], image.shape[2]), dtype=torch.float32)
-            return image.masked_scatter_(mask=mask, source=random_values)
+        
+        black_values = torch.zeros((image.shape[0], image.shape[1], image.shape[2]), dtype=torch.float32) ## complete black 
+        mask = 
+
+        image[mask] = black_values[mask]
+        return image
 
 ## perturbing cityscapes
 @PIPELINES.register_module()
@@ -39,12 +39,13 @@ class CityTransform:
         data_transforms = transforms.Compose([
             # transforms.TrivialAugmentWide(),  ## not compatible with torch 1.8 version! 
             transforms.ToTensor(), 
-            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)), ## commenting this only for testing other 
+            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            # transforms.RandomErasing(p =1.0, value=0), ## getting grayish color, so making my own black values mask
             # transforms.RandomCrop(size=(1024,1024), pad_if_needed = True) ## only doing on image,but required to be executed both image and its label!
-            transforms.RandomErasing(), 
+            # transforms.ColorJitter(brightness=(0.5,1.5),contrast=(0.5,1)), ## to many hyper-params to deal with  
             # transforms.RandAugment(num_ops= 4), # not compatible with torch 1.8 version! 
             # transforms.RandomErasing(scale=(0.02, 0.4), value=-1),  
-            # RandomUniformValues(), 
+            RandomBlackValues(), 
         ])
         results['img'] = data_transforms(input)
         
