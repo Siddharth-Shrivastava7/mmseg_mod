@@ -15,10 +15,15 @@ class RandomBlackValues(object):
     """
     def __call__(self, image):
         
-        black_values = torch.zeros((image.shape[0], image.shape[1], image.shape[2]), dtype=torch.float32) ## complete black 
-        mask = 
+        mask_size = (int(image.size(1) * 0.3), int(image.size(2) * 0.3))  # Adjust the mask size
+        mask = torch.ones(1, image.size(1), image.size(2))  # Initialize with all ones
+        x = random.randint(0, image.size(1) - mask_size[0])
+        y = random.randint(0, image.size(2) - mask_size[1]) 
+        mask[0, x:x + mask_size[0], y:y + mask_size[1]] = 0  # Set the mask region to 0
 
-        image[mask] = black_values[mask]
+        # Apply the mask to the image
+        image = image * mask
+        
         return image
 
 ## perturbing cityscapes
@@ -34,18 +39,19 @@ class CityTransform:
     def __call__(self, results):
         
         # torch.manual_seed(0) # reproducibility of results  # not required, random erasing is getting fixed by it
-        input = Image.open(os.path.join(results['filename'])) 
+        # input = torch.tensor(np.array(Image.open(os.path.join(results['filename']))), dtype=torch.float32)
+        input = Image.open(os.path.join(results['filename']))
         # input = results['img'] ## since, some transforms is already used
         data_transforms = transforms.Compose([
             # transforms.TrivialAugmentWide(),  ## not compatible with torch 1.8 version! 
             transforms.ToTensor(), 
             transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            # transforms.RandomErasing(p =1.0, value=0), ## getting grayish color, so making my own black values mask
+            transforms.RandomErasing(p =1.0, value=0), ## getting grayish color, so making my own black values mask
             # transforms.RandomCrop(size=(1024,1024), pad_if_needed = True) ## only doing on image,but required to be executed both image and its label!
             # transforms.ColorJitter(brightness=(0.5,1.5),contrast=(0.5,1)), ## to many hyper-params to deal with  
             # transforms.RandAugment(num_ops= 4), # not compatible with torch 1.8 version! 
             # transforms.RandomErasing(scale=(0.02, 0.4), value=-1),  
-            RandomBlackValues(), 
+            # RandomBlackValues(), 
         ])
         results['img'] = data_transforms(input)
         
