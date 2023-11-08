@@ -33,13 +33,16 @@ class CityTransform:
         
     def __call__(self, results):
         
-        torch.manual_seed(0) # reproducibility of results 
+        # torch.manual_seed(0) # reproducibility of results  # not required, random erasing is getting fixed by it
         input = Image.open(os.path.join(results['filename'])) 
+        # input = results['img'] ## since, some transforms is already used
         data_transforms = transforms.Compose([
-            # transforms.TrivialAugmentWide(),  ## not compatible with torch 1.8.1 version! 
+            # transforms.TrivialAugmentWide(),  ## not compatible with torch 1.8 version! 
             transforms.ToTensor(), 
-            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)), ## commenting this only for testing other 
+            # transforms.RandomCrop(size=(1024,1024), pad_if_needed = True) ## only doing on image,but required to be executed both image and its label!
             transforms.RandomErasing(), 
+            # transforms.RandAugment(num_ops= 4), # not compatible with torch 1.8 version! 
             # transforms.RandomErasing(scale=(0.02, 0.4), value=-1),  
             # RandomUniformValues(), 
         ])
@@ -55,7 +58,7 @@ class CityTransform:
         ######### to save in '.png' format 
         # Save path
         id_name = results['filename'].split('/')[-1]
-        root_folder = results['filename'].split('train')[0]
+        root_folder = results['filename'].split('train')[0] ## change 'val' to 'train' later
         save_path = os.path.join(root_folder, 'custom_train', id_name) 
         
         # ### saving the image as it is, with just de-standardising and converting to range without normalising the image ## results are more darker here 
