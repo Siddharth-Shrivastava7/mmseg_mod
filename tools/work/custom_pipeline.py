@@ -5,7 +5,8 @@ import numpy as np
 from PIL import Image 
 import random
 import torchvision.transforms as transforms  
-
+import matplotlib.pyplot as plt
+import torchvision
 
 
 class RandomUniformValues(object):
@@ -24,8 +25,10 @@ class RandomUniformValues(object):
 @PIPELINES.register_module()
 class CityTransform:
     def __init__(self) -> None:
-        self.img_norm_cfg = dict(
-        mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+        # self.img_norm_cfg = dict(
+        # mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+        self.mean = (0.485, 0.456, 0.406) 
+        self.std = (0.229, 0.224, 0.225)
         
         
     def __call__(self, results):
@@ -41,7 +44,38 @@ class CityTransform:
             # RandomUniformValues(), 
         ])
         results['img'] = data_transforms(input)
-    
+        
+        ########## saving the perturbed cityscapes images
+        ########## in numpy fashion  ##### to large to save ~3k images
+        # result_img_arr = results['img'].numpy()
+        # id_name = results['filename'].split('/')[-1].replace('.png', '.npy')
+        # root_folder = results['filename'].split('train')[0]
+        # save_path = os.path.join(root_folder, 'custom_train', id_name)        
+        # np.save(save_path, result_img_arr)
+        ######### to save in '.png' format 
+        # Save path
+        id_name = results['filename'].split('/')[-1]
+        root_folder = results['filename'].split('train')[0]
+        save_path = os.path.join(root_folder, 'custom_train', id_name) 
+        
+        # ### saving the image as it is, with just de-standardising and converting to range without normalising the image ## results are more darker here 
+        # torchvision.utils.save_image(results['img'], save_path) 
+
+        ##### saving the image by normalising it
+        # Normalize the standardized tensor to the range [0, 1] 
+        # normalized_tensor = (results['img'] - results['img'].min()) / (results['img'].max() - results['img'].min())
+        # # Convert the PyTorch tensor to a NumPy array
+        # numpy_array = (normalized_tensor.permute(1, 2, 0).numpy() * 255).astype(np.uint8)  # Assuming CHW format (channels, height, width)
+        # # Create a PIL image from the NumPy array
+        # image = Image.fromarray(numpy_array)
+        # # Save the image as a PNG file
+        # id_name = results['filename'].split('/')[-1]
+        # root_folder = results['filename'].split('train')[0]
+        # save_path = os.path.join(root_folder, 'custom_train', id_name) 
+        # image.save(save_path)
+        ## save as above code (" saving the image by normalising it")
+        torchvision.utils.save_image(results['img'], save_path, normalize = True) 
+
         return results
         
 
