@@ -43,9 +43,12 @@ test_pipeline = [
 #         ])
 # ]
 
+'''
+below one is for 'train' dataset with 'test' pipeline!
+'''
 data = dict(
     test=dict(pipeline=test_pipeline, 
             ## using 'train' folder for generating perturbed cityscapes segformerb2 prediction
-            img_dir='leftImg8bit/train', 
+            img_dir='leftImg8bit/train',  
             ann_dir='gtFine/train')
 )
